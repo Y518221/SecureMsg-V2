@@ -1,0 +1,162 @@
+{
+  "version": "1.1.0",
+  "bot": {
+    "name": "Support Bot",
+    "id": "SECURE-BOT-999",
+    "source_of_truth": "README.md",
+    "description": "Rule-based support assistant for SecureMsg. Answers only based on implemented features."
+  },
+
+  "behavior": {
+    "tone": "friendly_technical_security_first",
+    "answer_style": "short_then_expand",
+    "hallucination_policy": "never_guess",
+    "unsupported_feature_response": "This feature is not supported in SecureMsg at the moment."
+  },
+
+  "topics": [
+    "account_login",
+    "encryption_security",
+    "direct_messaging",
+    "group_chat",
+    "support_bot_behavior",
+    "files",
+    "unread_notifications",
+    "errors_troubleshooting",
+    "limitations"
+  ],
+
+  "fallbacks": {
+    "empty_input": "Tell me what you need help with, and I’ll guide you step by step.",
+    "unknown": "I can help with security, groups, messages, files, unread badges, and account issues. What problem are you facing?",
+    "low_confidence": "Can you clarify what you are trying to do or which feature you are asking about?"
+  },
+
+  "safety": {
+    "blocked_requests": [
+      "password reset actions",
+      "account takeover or impersonation",
+      "encryption key, salt, iv, or secret disclosure",
+      "security or RLS bypass instructions",
+      "legal, compliance, or regulatory advice",
+      "internal environment variables or secrets"
+    ],
+    "refusal_template": "I can’t help with that request. I can explain supported SecureMsg features and safe troubleshooting steps."
+  },
+
+  "intents": [
+    {
+      "id": "encryption_security",
+      "confidence": 0.95,
+      "keywords": ["encrypt", "encryption", "security", "secure", "privacy", "decrypt", "server read"],
+      "examples": [
+        "Can the server read my messages?",
+        "How are messages encrypted?",
+        "Is SecureMsg end-to-end encrypted?"
+      ],
+      "reply": {
+        "short": "Messages are encrypted client-side using AES-256-GCM. The server stores only encrypted payloads.",
+        "detailed": "SecureMsg encrypts all message content in the client using AES-256-GCM with per-message randomness. Session passwords and keys are kept in memory only and are never stored on the server."
+      }
+    },
+
+    {
+      "id": "group_chat",
+      "confidence": 0.9,
+      "keywords": ["group", "groups", "member", "owner", "join", "leave", "delete group"],
+      "examples": [
+        "Who can read group messages?",
+        "Can a non-member see group chat?",
+        "Who can delete a group?"
+      ],
+      "reply": {
+        "short": "Only group members or the owner can read and send messages. Only the owner can delete the group.",
+        "detailed": "Group access is enforced by database RLS policies. Messages are readable only by members or the owner, and deletion rights are restricted to the group owner."
+      }
+    },
+
+    {
+      "id": "session_unlock",
+      "confidence": 0.9,
+      "keywords": ["unlock", "session", "password", "locked", "cannot read"],
+      "examples": [
+        "Why do I need to unlock chats again?",
+        "Why are my messages unreadable?"
+      ],
+      "reply": {
+        "short": "Chats must be unlocked with the session password used for encryption.",
+        "detailed": "Session passwords and derived keys live only in memory. After refresh or logout, you must unlock chats again to decrypt messages."
+      }
+    },
+
+    {
+      "id": "file_messages",
+      "confidence": 0.85,
+      "keywords": ["file", "upload", "download", "attachment"],
+      "examples": [
+        "Why can’t I download a file?",
+        "Are files encrypted too?"
+      ],
+      "reply": {
+        "short": "Files are encrypted before upload and require an unlocked session to download.",
+        "detailed": "Encrypted files use the same session-based encryption model as messages. If download fails, unlock the chat session and retry."
+      }
+    },
+
+    {
+      "id": "unread_notifications",
+      "confidence": 0.8,
+      "keywords": ["unread", "badge", "notification", "counter"],
+      "examples": [
+        "Why did my unread count reset?",
+        "Why don’t unread badges persist?"
+      ],
+      "reply": {
+        "short": "Unread badges are session-based and reset after reload or logout.",
+        "detailed": "Unread counts are managed in frontend memory and are not yet persisted in the database."
+      }
+    },
+
+    {
+      "id": "account_login",
+      "confidence": 0.85,
+      "keywords": ["login", "register", "account", "delete account"],
+      "examples": [
+        "Why can’t I log in?",
+        "How do I delete my account?"
+      ],
+      "reply": {
+        "short": "Check credentials and network status. Account deletion is permanent.",
+        "detailed": "SecureMsg uses Supabase authentication. Deleting your account permanently removes your data and messages."
+      }
+    },
+
+    {
+      "id": "rls_errors",
+      "confidence": 0.95,
+      "keywords": ["rls", "42501", "policy", "permission denied"],
+      "examples": [
+        "I get 42501 errors when sending messages",
+        "Row-level security error"
+      ],
+      "reply": {
+        "short": "This usually means a Supabase key or RLS policy mismatch.",
+        "detailed": "Verify service-role vs anon keys, reapply RLS policies from supabase.sql, restart the server, and re-login."
+      }
+    }
+  ],
+
+  "limitations": [
+    "Support Bot is rule-based, not generative AI",
+    "Unread counts are not persisted across reloads",
+    "Session passwords cannot be recovered",
+    "Encryption metadata is visible by design"
+  ],
+
+  "future_features": [
+    "Persist unread counts",
+    "Admin-editable bot knowledge",
+    "Message pagination",
+    "Automated permission tests"
+  ]
+}

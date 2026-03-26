@@ -1,0 +1,5 @@
+{
+  "name": "SecureMsg",
+  "description": "End-to-end encrypted messaging and file sharing with zero-knowledge architecture.",
+  "requestFramePermissions": []
+}

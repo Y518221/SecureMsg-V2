@@ -271,6 +271,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !chatPassword) return;
+    const outgoingText = input;
 
     try {
       const sentAt = new Date().toISOString();
@@ -278,7 +279,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       const key = keyCache[salt] || await deriveKey(chatPassword, salt);
       if (!keyCache[salt]) setKeyCache(prev => ({ ...prev, [salt]: key }));
 
-      const { content, iv } = await encryptData(input, key);
+      const { content, iv } = await encryptData(outgoingText, key);
       const data = await api.post('/api/messages/send', {
         receiverId: !isGroup ? chat.id : undefined,
         groupId: isGroup ? chat.id : undefined,
@@ -306,15 +307,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           if (prev.some(m => m.id === data.id)) return prev;
           return sortByCreatedAt([...prev, sentMsg]);
         });
-        setDecryptedMessages(prev => ({ ...prev, [data.id]: input }));
+        setDecryptedMessages(prev => ({ ...prev, [data.id]: outgoingText }));
         setInput('');
 
         if (chat.id === BOT_ID) {
-          handleBotReply(input, serverCreatedAt);
+          handleBotReply(outgoingText, serverCreatedAt).catch((err) => {
+            console.error("Bot reply failed:", err);
+            setToast({ message: "Message sent, but the bot reply failed", type: 'error' });
+          });
         }
       }
-    } catch (e) {
-      setToast({ message: "Failed to send message", type: 'error' });
+    } catch (e: any) {
+      setToast({ message: e?.message || "Failed to send message", type: 'error' });
     }
   };
 

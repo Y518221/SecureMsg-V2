@@ -48,7 +48,7 @@
     {
       "id": "encryption_security",
       "confidence": 0.95,
-      "keywords": ["encrypt", "encryption", "security", "secure", "privacy", "decrypt", "server read"],
+      "keywords": ["encrypt", "encryption", "security", "secure", "privacy", "data protection", "protect", "protected", "private", "confidential", "decrypt", "server read"],
       "examples": [
         "Can the server read my messages?",
         "How are messages encrypted?",
@@ -72,6 +72,21 @@
       "reply": {
         "short": "Only group members or the owner can read and send messages. Only the owner can delete the group.",
         "detailed": "Group access is enforced by database RLS policies. Messages are readable only by members or the owner, and deletion rights are restricted to the group owner."
+      }
+    },
+
+    {
+      "id": "direct_messaging",
+      "confidence": 0.9,
+      "keywords": ["message", "messages", "massege", "msg", "chat", "dm", "direct"],
+      "examples": [
+        "How do messages work?",
+        "Can I send a private message?",
+        "And my message?"
+      ],
+      "reply": {
+        "short": "SecureMsg sends direct messages as encrypted payloads between two users.",
+        "detailed": "Before a message leaves your browser, it is encrypted with the chat session password. The server stores and delivers the encrypted content, IV, salt, sender, receiver, and timestamp, but not the readable message text."
       }
     },
 

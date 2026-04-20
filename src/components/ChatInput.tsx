@@ -6,7 +6,7 @@ interface ChatInputProps {
   setInput: (val: string) => void;
   onSend: (e: React.FormEvent) => void;
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ input, setInput, onSend, onFileUpload, fileInputRef }) => (

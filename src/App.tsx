@@ -16,11 +16,22 @@ import { HomeView } from './components/HomeView';
 import { AboutView } from './components/AboutView';
 import { AuthView } from './components/AuthView';
 
+type ChatContact = {
+  id: string;
+  secure_id?: string;
+  username: string;
+};
+
+type SecureGroup = {
+  id: string;
+  name: string;
+};
+
 export default function App() {
   const { user, token, setToken, setUser, logout, loading } = useAuth();
   const [view, setView] = useState<'home' | 'about' | 'login' | 'register' | 'chat'>('home');
-  const [activeChat, setActiveChat] = useState<any>(null);
-  const [activeGroup, setActiveGroup] = useState<any>(null);
+  const [activeChat, setActiveChat] = useState<ChatContact | null>(null);
+  const [activeGroup, setActiveGroup] = useState<SecureGroup | null>(null);
   const { messages, setMessages } = useMessages(token, user?.id, activeChat?.id, activeGroup?.id);
   
   const [sessionKeys, setSessionKeys] = useState<Record<string, CryptoKey>>({});
@@ -28,8 +39,8 @@ export default function App() {
   
   const [showId, setShowId] = useState(false);
   const [searchId, setSearchId] = useState('');
-  const [groups, setGroups] = useState<any[]>([]);
-  const [recentChats, setRecentChats] = useState<any[]>([]);
+  const [groups, setGroups] = useState<SecureGroup[]>([]);
+  const [recentChats, setRecentChats] = useState<ChatContact[]>([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
@@ -38,6 +49,32 @@ export default function App() {
   const [newGroupName, setNewGroupName] = useState('');
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<{message: string, type: 'error' | 'success'} | null>(null);
+
+  const setChatSessionKey = (chatId: string, key: CryptoKey | undefined) => {
+    setSessionKeys(prev => {
+      if (!key) {
+        if (!prev[chatId]) return prev;
+        const next = { ...prev };
+        delete next[chatId];
+        return next;
+      }
+
+      return { ...prev, [chatId]: key };
+    });
+  };
+
+  const setStoredChatPassword = (chatId: string, password: string | undefined) => {
+    setChatPasswords(prev => {
+      if (!password) {
+        if (!prev[chatId]) return prev;
+        const next = { ...prev };
+        delete next[chatId];
+        return next;
+      }
+
+      return { ...prev, [chatId]: password };
+    });
+  };
 
   useEffect(() => {
     if (toast) {
@@ -54,8 +91,8 @@ export default function App() {
   const fetchGroups = async (notifyIfRemoved = false) => {
     if (!token) return;
     try {
-      const latestGroups = await api.get('/api/groups', token);
-      const latestIds = new Set(latestGroups.map((g: any) => g.id));
+      const latestGroups = await api.get('/api/groups', token) as SecureGroup[];
+      const latestIds = new Set(latestGroups.map((g) => g.id));
 
       setGroups(latestGroups);
 
@@ -331,7 +368,7 @@ export default function App() {
                     if (!query) return;
 
                     try {
-                      const data = await api.get(`/api/auth/search/${encodeURIComponent(query)}`, token!);
+                      const data = await api.get(`/api/auth/search/${encodeURIComponent(query)}`, token!) as ChatContact;
                       setActiveChat(data);
                       setActiveGroup(null);
                       setSidebarOpen(false);
@@ -341,7 +378,7 @@ export default function App() {
                     } catch {}
 
                     try {
-                      const data = await api.post(`/api/groups/join/${query}`, {}, token!);
+                      const data = await api.post(`/api/groups/join/${query}`, {}, token!) as { group: SecureGroup };
                       const joinedGroup = data.group;
                       setGroups(prev => prev.some(g => g.id === joinedGroup.id) ? prev : [...prev, joinedGroup]);
                       setActiveGroup(joinedGroup);
@@ -464,9 +501,9 @@ export default function App() {
             messages={messages} 
             setMessages={setMessages}
             sessionKey={sessionKeys[chat.id]}
-            setSessionKey={(key) => setSessionKeys(prev => ({ ...prev, [chat.id]: key }))}
+            setSessionKey={(key) => setChatSessionKey(chat.id, key)}
             chatPassword={chatPasswords[chat.id]}
-            setChatPassword={(pw) => setChatPasswords(prev => ({ ...prev, [chat.id]: pw }))}
+            setChatPassword={(pw) => setStoredChatPassword(chat.id, pw)}
             setSidebarOpen={setSidebarOpen}
             onBack={() => { setActiveChat(null); setActiveGroup(null); }}
             setToast={setToast}
@@ -506,7 +543,7 @@ export default function App() {
 
                       setIsCreatingGroup(true);
                       try {
-                        const data = await api.post('/api/groups/create', { name: trimmed }, token!);
+                        const data = await api.post('/api/groups/create', { name: trimmed }, token!) as { id: string };
                         setGroups(prev => [...prev, { id: data.id, name: trimmed }]);
                         setShowCreateGroup(false);
                         setNewGroupName('');

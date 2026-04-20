@@ -107,6 +107,37 @@ export const messageService = {
     return data;
   },
 
+  async saveBotReply(receiverId: string, payload: any) {
+    const db = getServiceRoleClient();
+    const { contentEncrypted, iv, salt, type } = payload;
+    if (!contentEncrypted || !iv || !salt) {
+      const err: any = new Error("Missing encrypted bot payload fields");
+      err.status = 400;
+      throw err;
+    }
+
+    const { data, error } = await db
+      .from("messages")
+      .insert([{
+        sender_id: "00000000-0000-0000-0000-000000000001",
+        receiver_id: receiverId,
+        group_id: null,
+        content_encrypted: contentEncrypted,
+        iv,
+        salt,
+        type: type || 'text'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase Bot Message Insert Error:", error);
+      throw error;
+    }
+
+    return data;
+  },
+
   async delete(userId: string, messageId: string) {
     const db = getServiceRoleClient();
     // Validate UUID format to prevent Supabase errors

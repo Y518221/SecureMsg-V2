@@ -1,6 +1,6 @@
-import { getServiceRoleClient } from "../lib/supabase";
+import { getServiceRoleClient } from "../lib/supabase.js";
 import crypto from "crypto";
-import { encryptServer } from "../lib/serverCrypto";
+import { encryptServer } from "../lib/serverCrypto.js";
 
 async function ensureUserProfile(db: any, userId: string, userMetadata?: any) {
   const { data: existingUser, error: existingUserError } = await db

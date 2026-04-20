@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { groupController } from "../controllers/groupController";
-import { messageController } from "../controllers/messageController";
-import { authenticate } from "../middleware/auth";
+import { groupController } from "../controllers/groupController.js";
+import { messageController } from "../controllers/messageController.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = Router();
 

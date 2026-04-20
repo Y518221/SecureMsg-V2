@@ -1,11 +1,11 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import authRoutes from "./server/routes/authRoutes";
-import messageRoutes from "./server/routes/messageRoutes";
-import groupRoutes from "./server/routes/groupRoutes";
-import { supabase } from "./server/lib/supabase";
-import { encryptServer } from "./server/lib/serverCrypto";
+import authRoutes from "./server/routes/authRoutes.js";
+import messageRoutes from "./server/routes/messageRoutes.js";
+import groupRoutes from "./server/routes/groupRoutes.js";
+import { supabase } from "./server/lib/supabase.js";
+import { encryptServer } from "./server/lib/serverCrypto.js";
 
 const app = express();
 const isDev = process.env.NODE_ENV !== "production";

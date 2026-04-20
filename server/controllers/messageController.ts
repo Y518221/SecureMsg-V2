@@ -1,5 +1,5 @@
-import { messageService } from "../services/messageService";
-import { botService } from "../services/botService";
+import { messageService } from "../services/messageService.js";
+import { botService } from "../services/botService.js";
 
 export const messageController = {
   async send(req: any, res: any) {

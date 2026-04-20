@@ -6,5 +6,16 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true
-  }
+  },
+  "include": [
+    "server.ts",
+    "server/**/*.ts",
+    "server/**/*.mts",
+    "server/**/*.cts"
+  ],
+  "exclude": [
+    "node_modules",
+    "src",
+    "dist"
+  ]
 }

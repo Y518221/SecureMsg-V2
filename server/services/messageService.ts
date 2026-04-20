@@ -1,4 +1,4 @@
-import { getServiceRoleClient } from "../lib/supabase";
+import { getServiceRoleClient } from "../lib/supabase.js";
 
 async function assertGroupAccess(db: any, userId: string, groupId: string) {
   const { data: group, error: groupError } = await db

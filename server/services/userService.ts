@@ -1,6 +1,6 @@
-import { getServiceRoleClient, supabaseAuth } from "../lib/supabase";
+import { getServiceRoleClient, supabaseAuth } from "../lib/supabase.js";
 import crypto from "crypto";
-import { encryptServer, decryptServer } from "../lib/serverCrypto";
+import { encryptServer, decryptServer } from "../lib/serverCrypto.js";
 
 const BOT_ID = "00000000-0000-0000-0000-000000000001";
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

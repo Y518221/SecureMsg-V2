@@ -50,12 +50,25 @@ export const messageController = {
 
   async botReply(req: any, res: any) {
     try {
+      if (req.body?.contentEncrypted && req.body?.iv && req.body?.salt) {
+        // This is a save request - no need to generate reply again
+        const botMessage = await messageService.saveBotReply(req.userId, {
+          contentEncrypted: req.body.contentEncrypted,
+          iv: req.body.iv,
+          salt: req.body.salt,
+          type: 'text'
+        });
+
+        return res.json({ success: true, saved: true, id: botMessage.id, created_at: botMessage.created_at });
+      }
+
+      // This is a generate request
       const text = String(req.body?.message || "");
       const reply = await botService.reply(text);
       res.json({ success: true, reply });
     } catch (e: any) {
-      console.error("[BOT] Error generating reply:", e);
-      res.status(500).json({ error: "Failed to generate bot reply" });
+      console.error("[BOT] Error:", e);
+      res.status(500).json({ error: "Failed to process bot request" });
     }
   }
 };

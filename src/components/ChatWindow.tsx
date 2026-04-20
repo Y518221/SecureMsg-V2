@@ -367,6 +367,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleBotReply = async (userInput: string, minCreatedAt?: string) => {
     let responseText = "Support bot is temporarily unavailable.";
+    let botMessageId: string | undefined;
+
     try {
       const resp = await api.post('/api/messages/bot-reply', { message: userInput }, token);
       responseText = resp?.reply || responseText;
@@ -393,6 +395,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       type: 'text',
       created_at: safeCreatedAt
     };
+
+    try {
+      const saveResp = await api.post('/api/messages/bot-reply', {
+        contentEncrypted: botEnc.content,
+        iv: botEnc.iv,
+        salt,
+      }, token);
+      if (saveResp?.saved && saveResp?.id) {
+        botMessageId = saveResp.id;
+        botMsg.id = saveResp.id;
+        botMsg.created_at = saveResp.created_at || botMsg.created_at;
+      }
+    } catch (e) {
+      console.error("Failed to save bot reply:", e);
+      // If save fails, still show the bot reply locally.
+    }
+
     if (!isMountedRef.current || chat.id !== BOT_ID) return;
     forceScrollToBottomRef.current = true;
     setMessages((prev: any[]) => sortByCreatedAt([...prev, botMsg]));

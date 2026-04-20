@@ -69,6 +69,18 @@ export const api = {
     return res.json();
   },
 
+  async delete(url: string, token: string) {
+    const fullUrl = buildUrl(url);
+    console.log('[API DELETE]', fullUrl);
+    
+    const res = await fetch(fullUrl, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
     if (!res.ok) {
       const text = await res.text();
       let errorMsg = "Request failed";

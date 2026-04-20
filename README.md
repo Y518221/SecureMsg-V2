@@ -10,6 +10,8 @@ SecureMsg is a full-stack encrypted messaging app with:
 
 The app uses React + Vite on the frontend and Express + Supabase on the backend.
 
+Live project: https://securemsg-34jy.onrender.com/
+
 ---
 
 ## 1. Core Features
@@ -306,4 +308,3 @@ Check:
 - group owner/member permissions
 - unlock/decrypt flow
 4. Add message pagination for large chat history.
-

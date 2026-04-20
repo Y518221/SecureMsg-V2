@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: securemsg
+    env: node
+    region: oregon
+    plan: free
+    
+    # Build command: Install dependencies and build the frontend
+    buildCommand: npm install && npm run build
+    
+    # Start command: Run the server
+    startCommand: npm start
+    
+    # Port that Render will expose
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      
+      # Reference your .env secrets in Render dashboard
+      # Environment > Environment Variables
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MASTER_ENCRYPTION_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

@@ -51,9 +51,10 @@ export const messageController = {
   async botReply(req: any, res: any) {
     try {
       const text = String(req.body?.message || "");
-      const reply = botService.reply(text);
+      const reply = await botService.reply(text);
       res.json({ success: true, reply });
     } catch (e: any) {
+      console.error("[BOT] Error generating reply:", e);
       res.status(500).json({ error: "Failed to generate bot reply" });
     }
   }

@@ -1,16 +1,9 @@
 import fs from "fs";
 import path from "path";
-
-type BotIntent = {
-  id: string;
-  keywords: string[];
-  confidence?: number;
-  reply: string | { short?: string; detailed?: string };
-};
+import { GoogleGenerativeAI } from "@google/genai";
 
 type BotKnowledge = {
   version: string;
-  bot_name?: string;
   bot?: {
     name?: string;
     source_of_truth?: string;
@@ -20,83 +13,123 @@ type BotKnowledge = {
   fallbacks: {
     empty_input: string;
     unknown: string;
-    low_confidence?: string;
   };
   safety: {
     blocked_requests: string[];
     refusal_template: string;
   };
-  intents: BotIntent[];
+  intents?: any[];
 };
 
 const FALLBACK_KNOWLEDGE: BotKnowledge = {
   version: "fallback",
-  bot_name: "Support Bot",
-  source_of_truth: "README.md",
+  bot: {
+    name: "Support Bot",
+    source_of_truth: "README.md",
+  },
   topics: [],
   fallbacks: {
     empty_input: "Tell me what you need help with and I will guide you step by step.",
     unknown: "I can help with security, groups, messages, files, unread badges, and account issues. Ask me a specific problem.",
   },
   safety: {
-    blocked_requests: [],
+    blocked_requests: [
+      "password reset",
+      "account takeover",
+      "encryption key",
+      "secret",
+      "bypass",
+      "legal advice",
+      "environment variables"
+    ],
     refusal_template:
       "I cannot help with that request. I can explain supported SecureMsg features and safe troubleshooting steps.",
   },
-  intents: [],
 };
-
-function normalizeReply(reply: BotIntent["reply"]): string {
-  if (typeof reply === "string") return reply;
-  if (reply && typeof reply === "object") {
-    if (typeof reply.short === "string" && reply.short.trim()) return reply.short;
-    if (typeof reply.detailed === "string" && reply.detailed.trim()) return reply.detailed;
-  }
-  return "Support bot is temporarily unavailable.";
-}
 
 function loadKnowledge(): BotKnowledge {
   try {
     const filePath = path.join(process.cwd(), "server", "data", "bot-knowledge.json");
     const raw = fs.readFileSync(filePath, "utf8");
     const parsed = JSON.parse(raw) as BotKnowledge;
-    if (!parsed?.intents || !Array.isArray(parsed.intents)) return FALLBACK_KNOWLEDGE;
-    return parsed;
+    return parsed || FALLBACK_KNOWLEDGE;
   } catch {
     return FALLBACK_KNOWLEDGE;
   }
 }
 
-function scoreIntent(input: string, intent: BotIntent): number {
-  return intent.keywords.reduce((score, keyword) => {
-    return input.includes(keyword) ? score + 1 : score;
-  }, 0);
+function buildSystemPrompt(knowledge: BotKnowledge): string {
+  const blockedRequests = knowledge.safety.blocked_requests.join(", ");
+  
+  return `You are SecureMsg Support Bot, a helpful and friendly assistant that answers questions about SecureMsg - a secure messaging application.
+
+IMPORTANT GUIDELINES:
+1. You ONLY provide information about SecureMsg features, security, and troubleshooting
+2. You are helpful, friendly, and security-conscious
+3. Keep answers concise but thorough
+4. If asked about blocked topics (${blockedRequests}), politely refuse using: "${knowledge.safety.refusal_template}"
+5. If you don't know the answer, suggest checking the README or official documentation
+6. Never guess or make up features - only describe what's actually in SecureMsg
+7. Supported topics: ${knowledge.topics.join(", ")}
+
+Answer helpfully and accurately. Stay focused on SecureMsg support.`;
 }
 
 export const botService = {
-  reply(userText: string) {
+  async reply(userText: string) {
     const knowledge = loadKnowledge();
-    const normalized = (userText || "").trim().toLowerCase();
-    if (!normalized) return knowledge.fallbacks.empty_input;
+    const normalized = (userText || "").trim();
 
-    const blocked = knowledge.safety.blocked_requests.some(term => normalized.includes(term.toLowerCase()));
-    if (blocked) return knowledge.safety.refusal_template;
-
-    let best: { intent: BotIntent; score: number } | null = null;
-    for (const intent of knowledge.intents) {
-      const score = scoreIntent(normalized, intent);
-      if (!best || score > best.score) {
-        best = { intent, score };
-      }
+    // Check for empty input
+    if (!normalized) {
+      return knowledge.fallbacks.empty_input;
     }
 
-    if (best && best.score > 0) {
-      const intentConfidence = typeof best.intent.confidence === "number" ? best.intent.confidence : 0.5;
-      if (best.score === 1 && intentConfidence < 0.8 && knowledge.fallbacks.low_confidence) {
-        return knowledge.fallbacks.low_confidence;
-      }
-      return normalizeReply(best.intent.reply);
+    // Check for blocked requests (quick safety check)
+    const blocked = knowledge.safety.blocked_requests.some(term =>
+      normalized.toLowerCase().includes(term.toLowerCase())
+    );
+    if (blocked) {
+      return knowledge.safety.refusal_template;
     }
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        console.error("[BOT] GEMINI_API_KEY not set");
+        return knowledge.fallbacks.unknown;
+      }
+
+      const client = new GoogleGenerativeAI({ apiKey });
+      const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const systemPrompt = buildSystemPrompt(knowledge);
+      
+      const response = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: systemPrompt + "\n\nUser Question: " + userText
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 500,
+        }
+      });
+
+      const text = response.response.text();
+      return text || knowledge.fallbacks.unknown;
+    } catch (error: any) {
+      console.error("[BOT] Gemini API error:", error.message);
+      return "I'm having trouble generating a response right now. Please try again.";
+    }
+  }
+};
 
     return knowledge.fallbacks.unknown;
   },

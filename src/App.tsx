@@ -228,6 +228,44 @@ export default function App() {
     }
   };
 
+  const handleDeleteContact = async (contactId: string) => {
+    if (!token) return;
+
+    const previousChats = recentChats;
+    setRecentChats(prev => prev.filter(c => c.id !== contactId));
+    setUnreadCounts(prev => {
+      if (!prev[contactId]) return prev;
+      const next = { ...prev };
+      delete next[contactId];
+      return next;
+    });
+    setSessionKeys(prev => {
+      if (!prev[contactId]) return prev;
+      const next = { ...prev };
+      delete next[contactId];
+      return next;
+    });
+    setChatPasswords(prev => {
+      if (!prev[contactId]) return prev;
+      const next = { ...prev };
+      delete next[contactId];
+      return next;
+    });
+    setActiveChat(prev => {
+      if (prev?.id !== contactId) return prev;
+      setMessages([]);
+      return null;
+    });
+
+    try {
+      await api.delete(`/api/auth/conversations/${contactId}`, token);
+      setToast({ message: "Contact removed", type: 'success' });
+    } catch (e: any) {
+      setRecentChats(previousChats);
+      setToast({ message: e.message || "Failed to remove contact", type: 'error' });
+    }
+  };
+
   if (loading) return <div className="h-screen bg-[#050505] flex items-center justify-center text-emerald-500 font-bold">Loading Secure Session...</div>;
 
   if (view === 'home') return <HomeView setView={setView} user={user} />;
@@ -359,11 +397,14 @@ export default function App() {
                     });
                     setSidebarOpen(false);
                   }}
-                  icon={<Shield className="w-4 h-4" />}
-                  title={c.username}
-                  badge={unreadCounts[c.id]}
-                />
-              ))}
+	                  icon={<Shield className="w-4 h-4" />}
+	                  title={c.username}
+	                  badge={unreadCounts[c.id]}
+                    actionIcon={<Trash2 className="w-4 h-4" />}
+                    actionLabel={`Remove ${c.username}`}
+                    onAction={() => handleDeleteContact(c.id)}
+	                />
+	              ))}
             </div>
           </section>
 

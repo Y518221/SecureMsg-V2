@@ -10,5 +10,6 @@ router.get("/me", authenticate, authController.getMe);
 router.get("/search/:secureId", authenticate, authController.search);
 router.delete("/me", authenticate, authController.deleteMe);
 router.get("/conversations", authenticate, authController.getConversations);
+router.delete("/conversations/:contactId", authenticate, authController.removeConversation);
 
 export default router;

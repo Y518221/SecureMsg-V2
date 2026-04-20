@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import { createServer as createViteServer } from "vite";
 import authRoutes from "./server/routes/authRoutes";
 import messageRoutes from "./server/routes/messageRoutes";
@@ -61,9 +62,15 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static("dist"));
+    app.get("*", (_req, res) => {
+      res.sendFile(path.resolve("dist", "index.html"));
+    });
   }
 
-  app.listen(3000, "0.0.0.0");
+  const port = Number(process.env.PORT) || 3000;
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`SecureMsg listening on port ${port}`);
+  });
 }
 
 startServer();

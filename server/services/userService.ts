@@ -2,6 +2,34 @@ import { getServiceRoleClient, supabaseAuth } from "../lib/supabase";
 import crypto from "crypto";
 import { encryptServer, decryptServer } from "../lib/serverCrypto";
 
+const BOT_ID = "00000000-0000-0000-0000-000000000001";
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getHiddenContactIds(userId: string) {
+  const db = getServiceRoleClient();
+  const { data, error } = await db.auth.admin.getUserById(userId);
+  if (error) throw error;
+
+  const hidden = data.user?.user_metadata?.hidden_contact_ids;
+  return Array.isArray(hidden) ? hidden.filter((id: unknown) => typeof id === "string") : [];
+}
+
+async function setHiddenContactIds(userId: string, hiddenContactIds: string[]) {
+  const db = getServiceRoleClient();
+  const { data, error } = await db.auth.admin.getUserById(userId);
+  if (error) throw error;
+
+  const userMetadata = data.user?.user_metadata || {};
+  const { error: updateError } = await db.auth.admin.updateUserById(userId, {
+    user_metadata: {
+      ...userMetadata,
+      hidden_contact_ids: hiddenContactIds
+    }
+  });
+
+  if (updateError) throw updateError;
+}
+
 export const userService = {
   async register(username: string, password: string) {
     const db = getServiceRoleClient();
@@ -73,7 +101,7 @@ export const userService = {
     return { ...data, username: decryptServer(data.username) };
   },
 
-  async searchBySecureId(secureId: string) {
+  async searchBySecureId(secureId: string, requesterId?: string) {
     const db = getServiceRoleClient();
     const { data, error } = await db
       .from("users")
@@ -81,6 +109,11 @@ export const userService = {
       .eq("secure_id", secureId)
       .single();
     if (error) throw error;
+
+    if (requesterId && data.id !== requesterId) {
+      await this.restoreConversation(requesterId, data.id);
+    }
+
     return { ...data, username: decryptServer(data.username) };
   },
 
@@ -93,6 +126,7 @@ export const userService = {
 
   async getConversations(userId: string) {
     const db = getServiceRoleClient();
+    const hiddenContactIds = new Set(await getHiddenContactIds(userId));
     const { data: sentMessages } = await db.from("messages").select("receiver_id").eq("sender_id", userId);
     const { data: receivedMessages } = await db.from("messages").select("sender_id").eq("receiver_id", userId);
 
@@ -102,6 +136,8 @@ export const userService = {
     ]);
     userIds.delete(userId);
     userIds.delete(null);
+    userIds.delete(BOT_ID);
+    hiddenContactIds.forEach(id => userIds.delete(id));
 
     if (userIds.size === 0) return [];
 
@@ -112,5 +148,38 @@ export const userService = {
 
     if (error) throw error;
     return users.map(u => ({ ...u, username: decryptServer(u.username) }));
+  },
+
+  async removeConversation(userId: string, contactId: string) {
+    if (!uuidRegex.test(contactId)) {
+      const err: any = new Error("Invalid contact ID");
+      err.status = 400;
+      throw err;
+    }
+
+    if (contactId === userId) {
+      const err: any = new Error("You cannot remove yourself from contacts");
+      err.status = 400;
+      throw err;
+    }
+
+    if (contactId === BOT_ID) {
+      return;
+    }
+
+    const hidden = await getHiddenContactIds(userId);
+    if (!hidden.includes(contactId)) {
+      await setHiddenContactIds(userId, [...hidden, contactId]);
+    }
+  },
+
+  async restoreConversation(userId: string, contactId: string) {
+    const hidden = await getHiddenContactIds(userId);
+    if (!hidden.includes(contactId)) return;
+
+    await setHiddenContactIds(
+      userId,
+      hidden.filter(id => id !== contactId)
+    );
   }
 };

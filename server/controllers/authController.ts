@@ -34,7 +34,7 @@ export const authController = {
 
   async search(req: any, res: any) {
     try {
-      const user = await userService.searchBySecureId(req.params.secureId);
+      const user = await userService.searchBySecureId(req.params.secureId, req.userId);
       res.json(user);
     } catch (e: any) {
       res.status(404).json({ error: "User not found" });
@@ -56,6 +56,15 @@ export const authController = {
       res.json(conversations);
     } catch (e: any) {
       res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  },
+
+  async removeConversation(req: any, res: any) {
+    try {
+      await userService.removeConversation(req.userId, req.params.contactId);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(e.status || 500).json({ error: e.message || "Failed to remove contact" });
     }
   }
 };

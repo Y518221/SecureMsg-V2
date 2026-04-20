@@ -42,10 +42,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [keyCache, setKeyCache] = useState<Record<string, CryptoKey>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [confirmDeleteMessageId, setConfirmDeleteMessageId] = useState<string | null>(null);
-	const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(false);
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-	const fileInputRef = useRef<HTMLInputElement>(null);
-	const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const shouldStickToBottomRef = useRef(true);
+  const forceScrollToBottomRef = useRef(false);
   const isMountedRef = useRef(true);
   const BOT_ID = '00000000-0000-0000-0000-000000000001';
   const sortByCreatedAt = (rows: any[]) =>
@@ -66,6 +68,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   useEffect(() => {
     isMountedRef.current = true;
+    shouldStickToBottomRef.current = true;
+    forceScrollToBottomRef.current = true;
     const url = isGroup ? `/api/groups/${chat.id}/messages` : `/api/messages/${chat.id}`;
     let mounted = true;
     const fetchLatest = () => {
@@ -106,9 +110,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     };
   }, [chat.id, isGroup, token, setMessages, user.id]);
 
+  const isNearBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
+
+  const scrollToBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  };
+
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, decryptedMessages]);
+    if (forceScrollToBottomRef.current || shouldStickToBottomRef.current) {
+      scrollToBottom();
+      forceScrollToBottomRef.current = false;
+    }
+  }, [messages.length, decryptedMessages]);
 
   // Re-decrypt messages when sessionKey changes or messages change
   useEffect(() => {
@@ -220,6 +239,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }, token);
 
       if (data.success) {
+        forceScrollToBottomRef.current = true;
         setDecryptedMessages(prev => ({ ...prev, [data.id]: payload }));
         setToast({ message: "File sent securely", type: 'success' });
       }
@@ -269,6 +289,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }, token);
 
       if (data.success) {
+        forceScrollToBottomRef.current = true;
         const serverCreatedAt = data.created_at || sentAt;
         const sentMsg = {
           id: data.id,
@@ -373,6 +394,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       created_at: safeCreatedAt
     };
     if (!isMountedRef.current || chat.id !== BOT_ID) return;
+    forceScrollToBottomRef.current = true;
     setMessages((prev: any[]) => sortByCreatedAt([...prev, botMsg]));
     setDecryptedMessages(prev => ({ ...prev, [botMsg.id]: responseText }));
   };
@@ -470,7 +492,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </span>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div
+        ref={scrollRef}
+        onScroll={() => {
+          shouldStickToBottomRef.current = isNearBottom();
+        }}
+        className="flex-1 overflow-y-auto p-6 space-y-4"
+      >
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
             <Lock className="w-12 h-12 mb-4 text-zinc-700" />
